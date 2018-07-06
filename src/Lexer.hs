@@ -28,31 +28,30 @@ nextToken = do
         '=' -> do
           readChar
           return (Tkn.EQ, "==")
-        _ -> return (Tkn.ASSIGN, show x)
-    ';' -> return (Tkn.SEMICOLON, show x)
-    '(' -> return (Tkn.LPAREN, show x)
-    ')' -> return (Tkn.RPAREN, show x)
-    ',' -> return (Tkn.COMMA, show x)
-    '+' -> return (Tkn.PLUS, show x)
-    '-' -> return (Tkn.MINUS, show x)
+        _ -> return (Tkn.ASSIGN, [x])
+    ';' -> return (Tkn.SEMICOLON, [x])
+    '(' -> return (Tkn.LPAREN, [x])
+    ')' -> return (Tkn.RPAREN, [x])
+    ',' -> return (Tkn.COMMA, [x])
+    '+' -> return (Tkn.PLUS, [x])
+    '-' -> return (Tkn.MINUS, [x])
     '!' -> do
       y <- peekChar
       case y of
         '=' -> do
           readChar
           return (Tkn.NOT_EQ, "!=")
-        _ -> return (Tkn.BANG, show x)
-    '/'    -> return (Tkn.SLASH, show x)
-    '*'    -> return (Tkn.ASTERISK, show x)
-    '<'    -> return (Tkn.LT, show x)
-    '>'    -> return (Tkn.GT, show x)
-    '{'    -> return (Tkn.LBRACE, show x)
-    '}'    -> return (Tkn.RBRACE, show x)
-    '\x00' -> return (Tkn.EOF, show x)
-    _
-      | isLetter x -> fmap ((\l -> (Tkn.keywords l, l)) . (x :)) readIdentifier
-      | isDigit x -> fmap (\l -> (Tkn.INT, x : l)) readIdentifier
-      | otherwise -> return (Tkn.ILLEGAL, "")
+        _ -> return (Tkn.BANG, [x])
+    '/'    -> return (Tkn.SLASH, [x])
+    '*'    -> return (Tkn.ASTERISK, [x])
+    '<'    -> return (Tkn.LT, [x])
+    '>'    -> return (Tkn.GT, [x])
+    '{'    -> return (Tkn.LBRACE, [x])
+    '}'    -> return (Tkn.RBRACE, [x])
+    '\x00' -> return (Tkn.EOF, [x])
+    _ | isLetter x -> (\l -> (Tkn.keywords l, l)) . (x :) <$> readIdentifier
+      | isDigit x  -> (\l -> (Tkn.INT, x : l)) <$> readNumber
+      | otherwise  -> return (Tkn.ILLEGAL, "")
 
 readChar :: State String Char
 readChar = do
@@ -66,12 +65,12 @@ readChar = do
 readNumber :: State String String
 readNumber = do
   x <- peekChar
-  if isDigit x then fmap (x :) readNumber else return ""
+  if isDigit x then (:) <$> readChar <*> readNumber else return ""
 
 readIdentifier :: State String String
 readIdentifier = do
   x <- peekChar
-  if isLetter x then fmap (x :) readIdentifier else return ""
+  if isLetter x then (:) <$> readChar <*> readIdentifier else return ""
 
 skipWhitespace :: State String ()
 skipWhitespace = do

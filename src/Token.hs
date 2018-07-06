@@ -8,7 +8,7 @@ data TokenType = ILLEGAL | EOF | IDENT | INT |
   ASSIGN | PLUS | MINUS | BANG | ASTERISK | SLASH |
   LT | GT | COMMA | SEMICOLON | LPAREN | RPAREN |
   LBRACE | RBRACE | FUNCTION | LET | TRUE | FALSE |
-  IF | ELSE | RETURN | EQ | NOT_EQ deriving Show
+  IF | ELSE | RETURN | EQ | NOT_EQ deriving (Show, Eq)
 
 keywords :: String -> TokenType
 keywords "fn"     = FUNCTION
