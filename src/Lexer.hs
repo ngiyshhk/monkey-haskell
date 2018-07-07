@@ -4,7 +4,7 @@ module Lexer
 where
 
 import qualified Token                         as Tkn
-import           Control.Applicative
+import           Data.Functor
 import           Control.Monad
 import           Control.Monad.State
 
@@ -12,10 +12,8 @@ toTokens :: State String [(Tkn.TokenType, String)]
 toTokens = do
   (t, s) <- nextToken
   case t of
-    Tkn.EOF -> do
-      put ""
-      return [(t, s)]
-    _ -> fmap ((t, s) :) toTokens
+    Tkn.EOF -> put "" $> [(t, s)]
+    _       -> ((t, s) :) <$> toTokens
 
 nextToken :: State String (Tkn.TokenType, String)
 nextToken = do
@@ -25,23 +23,19 @@ nextToken = do
     '=' -> do
       y <- peekChar
       case y of
-        '=' -> do
-          readChar
-          return (Tkn.EQ, "==")
-        _ -> return (Tkn.ASSIGN, [x])
-    ';' -> return (Tkn.SEMICOLON, [x])
-    '(' -> return (Tkn.LPAREN, [x])
-    ')' -> return (Tkn.RPAREN, [x])
-    ',' -> return (Tkn.COMMA, [x])
-    '+' -> return (Tkn.PLUS, [x])
-    '-' -> return (Tkn.MINUS, [x])
+        '=' -> readChar $> (Tkn.EQ, "==")
+        _   -> return (Tkn.ASSIGN, [x])
     '!' -> do
       y <- peekChar
       case y of
-        '=' -> do
-          readChar
-          return (Tkn.NOT_EQ, "!=")
-        _ -> return (Tkn.BANG, [x])
+        '=' -> readChar $> (Tkn.NOT_EQ, "!=")
+        _   -> return (Tkn.BANG, [x])
+    ';'    -> return (Tkn.SEMICOLON, [x])
+    '('    -> return (Tkn.LPAREN, [x])
+    ')'    -> return (Tkn.RPAREN, [x])
+    ','    -> return (Tkn.COMMA, [x])
+    '+'    -> return (Tkn.PLUS, [x])
+    '-'    -> return (Tkn.MINUS, [x])
     '/'    -> return (Tkn.SLASH, [x])
     '*'    -> return (Tkn.ASTERISK, [x])
     '<'    -> return (Tkn.LT, [x])
@@ -58,9 +52,7 @@ readChar = do
   xs <- get
   case xs of
     []         -> return '\x00'
-    (x : rest) -> do
-      put rest
-      return x
+    (x : rest) -> put rest $> x
 
 readNumber :: State String String
 readNumber = do
@@ -74,22 +66,15 @@ readIdentifier = do
 
 skipWhitespace :: State String ()
 skipWhitespace = do
-  xs <- get
-  case xs of
-    []         -> return ()
-    (x : rest) -> when
-      (isWhitespace x)
-      (do
-        put rest
-        skipWhitespace
-      )
+  x <- peekChar
+  when (isWhitespace x) $ readChar *> skipWhitespace
 
 peekChar :: State String Char
 peekChar = do
   xs <- get
   case xs of
-    []         -> return '\x00'
-    (x : rest) -> return x
+    []      -> return '\x00'
+    (x : _) -> return x 
 
 isLetter :: Char -> Bool
 isLetter '_' = True
